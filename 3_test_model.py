@@ -23,6 +23,8 @@ CLASS_NAMES = ["nothing", "hand", "cup"] # 必須與模型訓練時的索引順�
 def get_transform():
     # 必須使用訓練時相同的 Normalization 參數
     return transforms.Compose([
+        # 統一將輸入影像縮放到 256x256 # <--- 調整為 224x224 以跟MobileNetV2標準輸入尺寸一致
+        transforms.Resize((224, 224)), 
         transforms.ToTensor(), # 將 (H, W, C) numpy array 轉換為 (C, H, W) Tensor，並將數值縮放到 [0, 1]
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) 
     ])

@@ -10,7 +10,7 @@ BASE_DATA_DIR = "data_split"
 SOURCE_CLASS_FOLDER = "nothing-train"  # <--- 修正為 nothing-train
 TARGET_CLASS_FOLDER = "nothing-train-augmented"  # <--- 修正為 nothing-train-augmented
 NUM_AUGMENTATIONS_PER_IMAGE = 4  # 每張圖片額外生成 4 個版本，總計擴增 5 倍
-TARGET_SIZE = (256, 256) # 統一設定輸出尺寸，以匹配模型需求
+TARGET_SIZE = (224, 224) # 統一設定輸出尺寸，以匹配模型需求 <--- 調整為 224x224 以跟MobileNetV2標準輸入尺寸一致
 
 # 忽略 PIL/Image 庫可能發出的警告
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -22,7 +22,7 @@ aggressive_augmentations = transforms.Compose([
     transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1),
     
     # 2. 隨機裁切 (Random Crop) 和 重新調整大小 (Resize)
-    # 這裡我們隨機裁切 85% 到 100% 的區域，然後縮放回 256x256
+    # 這裡我們隨機裁切 85% 到 100% 的區域，然後縮放回 224x224
     transforms.RandomResizedCrop(
         size=TARGET_SIZE, 
         scale=(0.85, 1.0), # 隨機裁切的比例範圍

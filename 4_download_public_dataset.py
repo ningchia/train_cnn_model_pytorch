@@ -23,7 +23,7 @@ TARGET_CLASSES = {
 }
 
 MAX_DOWNLOAD_PER_CLASS = 300
-TARGET_SIZE = (256, 256)
+TARGET_SIZE = (224, 224)    # <--- 調整為 224x224 以跟MobileNetV2標準輸入尺寸一致
 
 # 圖像處理轉換
 resize_transform = transforms.Resize(TARGET_SIZE)
