@@ -120,16 +120,27 @@ class CustomSplitDataset(Dataset):
 
 # --- 4. 數據轉換 (Transform)：針對 MobileNetV2 進行調整 ---
 # MobileNetV2 標準輸入尺寸為 224x224，並使用 ImageNet 標準化參數
-transform = transforms.Compose([
+# 訓練集專用轉換 (包含數據擴增)
+train_transform = transforms.Compose([
     transforms.Resize((224, 224)), # <--- 調整為 224x224
+    # *** 關鍵新增：隨機水平翻轉 ***
+    transforms.RandomHorizontalFlip(), 
+    # ********************************
     transforms.ToTensor(), 
     # 使用 ImageNet 標準化的均值和標準差
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) 
 ])
 
-def get_loaders(data_dir, batch_size, transform):
-    train_dataset = CustomSplitDataset(data_dir, 'train', transform)
-    val_dataset = CustomSplitDataset(data_dir, 'validate', transform)
+# 驗證集/測試集專用轉換 (不包含隨機擴增)
+val_transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(), 
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) 
+])
+
+def get_loaders(data_dir, batch_size):
+    train_dataset = CustomSplitDataset(data_dir, 'train', train_transform)
+    val_dataset = CustomSplitDataset(data_dir, 'validate', val_transform)
     
     if len(train_dataset) == 0 or len(val_dataset) == 0:
          raise ValueError(f"訓練集或驗證集為空。訓練集: {len(train_dataset)}, 驗證集: {len(val_dataset)}")
@@ -332,7 +343,7 @@ if __name__ == '__main__':
     checkpoint_path = os.path.join(MODEL_SAVE_PATH, CHECKPOINT_FILE)
 
     try:
-        train_loader, val_loader, num_classes_detected = get_loaders(DATA_DIR, BATCH_SIZE, transform)
+        train_loader, val_loader, num_classes_detected = get_loaders(DATA_DIR, BATCH_SIZE)
         
         print(f"總訓練樣本數: {len(train_loader.dataset)}")
         print(f"總驗證樣本數: {len(val_loader.dataset)}")
