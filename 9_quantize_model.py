@@ -5,6 +5,11 @@ import sys
 import time
 from typing import Literal
 
+# --- 導入 torchao 的量化 API ---
+from torchao.quantization import quantize_ # 最上層的量化函式
+from torchao.quantization import Int8DynamicActivationInt8WeightConfig # Int8 動態量化配置
+# -----------------------------
+
 # 假設 MobileNetTransfer 結構定義在 cnn_models.py 或 model_defs.py 中
 # 這裡我們需要導入它
 # from model_defs import MobileNetTransfer 
@@ -63,39 +68,28 @@ def quantize_model():
         # 步驟 1: 載入 FP32 模型
         fp32_model = load_fp32_model(NUM_CLASSES)
         
-        # 步驟 2: 執行後訓練動態量化 (Post-Training Dynamic Quantization)
+        # 步驟 2: 定義量化配置 (Int8 Dynamic Quantization)
+        # 此配置會將權重轉為 Int8，並在推論時動態量化激活值。
+        quant_config = Int8DynamicActivationInt8WeightConfig()
+
+        # 步驟 3: 執行後訓練動態量化 (Post-Training Dynamic Quantization)
         # 這種方法會將權重從 FP32 轉換為 INT8，並在推論時動態校準激活值。
-        print("\n⏳ 正在執行後訓練動態量化 (FP32 -> INT8)...")
+        print("\n⏳ 正在執行後訓練動態量化 (FP32 -> INT8) 使用 quantize_ 函式...")
         start_time = time.time()
         
-        # 'qint8' 是目標量化類型
-        # 'x86' 是為 x86 CPU 部署優化 (推薦用於通用 CPU)
-
-        # 用 torch.quantization.quantize_dynamic() 執行model量化時得到警告訊息,需要改用新的 torchao 函式庫 :
-        #
-        #   DeprecationWarning: torch.ao.quantization is deprecated and will be removed in 2.10.
-        #   For migrations of users:
-        #   1. Eager mode quantization (torch.ao.quantization.quantize, torch.ao.quantization.quantize_dynamic), please migrate to use torchao eager mode quantize_ API instead
-        #   2. FX graph mode quantization (torch.ao.quantization.quantize_fx.prepare_fx,torch.ao.quantization.quantize_fx.convert_fx, please migrate to use torchao pt2e quantization API instead (prepare_pt2e, convert_pt2e)
-        #   3. pt2e quantization has been migrated to torchao (https://github.com/pytorch/ao/tree/main/torchao/quantization/pt2e)
-        #   see https://github.com/pytorch/ao/issues/2259 for more details
-              
-        quantized_model = torch.quantization.quantize_dynamic(
-            model=fp32_model,
-            # 指定要量化的模塊類型 (通常只需要線性層和卷積層)
-            # MobileNetV2 中主要是 Conv2d 和 Linear
-            qconfig_spec={nn.Linear, nn.Conv2d}, 
-            dtype=torch.qint8,
-            # mapping={nn.Linear: 'x86'}, # PyTorch 2.1+ 推薦使用
-        )
+        # **主要修改點**: 使用 quantize_ 搭配配置
+        # quantize_ 是 in-place 函式，會直接修改 fp32_model
+        quantize_(fp32_model, quant_config)
+        
+        quantized_model = fp32_model 
         
         end_time = time.time()
         print(f"✅ 量化完成！耗時: {end_time - start_time:.2f} 秒")
         
-        # 步驟 3: 儲存量化後的 INT8 模型
+        # 步驟 4: 儲存量化後的 INT8 模型
         torch.save(quantized_model.state_dict(), INT8_MODEL_PATH)
 
-        # 步驟 4: 驗證檔案大小和準確度差異 (可選，但強烈推薦)
+        # 步驟 5: 驗證檔案大小和準確度差異 (可選，但強烈推薦)
         fp32_size = os.path.getsize(FP32_CHECKPOINT_PATH)
         int8_size = os.path.getsize(INT8_MODEL_PATH)
 

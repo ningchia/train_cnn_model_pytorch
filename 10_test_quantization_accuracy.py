@@ -6,6 +6,11 @@ import os
 import time
 from typing import List, Tuple
 
+# --- 導入 torchao 的量化 API ---
+from torchao.quantization import quantize_ # 最上層的量化函式
+from torchao.quantization import Int8DynamicActivationInt8WeightConfig # Int8 動態量化配置
+# -----------------------------
+
 # --- 從 model_defs 模組導入模型結構 ---
 from model_defs import MobileNetTransfer 
 
@@ -117,27 +122,17 @@ def load_int8_model(num_classes: int) -> nn.Module:
     # 步驟 1: 初始化原始模型結構 (FP32)
     fp32_model = MobileNetTransfer(num_classes=num_classes, use_pretrained=False) 
     
-    # 步驟 2: 將結構轉換為量化模型
-    # 必須使用與量化時相同的配置
-
-    # 用 torch.quantization.quantize_dynamic() 執行model量化時得到警告訊息,需要改用新的 torchao 函式庫 :
-    #
-    #   DeprecationWarning: torch.ao.quantization is deprecated and will be removed in 2.10.
-    #   For migrations of users:
-    #   1. Eager mode quantization (torch.ao.quantization.quantize, torch.ao.quantization.quantize_dynamic), please migrate to use torchao eager mode quantize_ API instead
-    #   2. FX graph mode quantization (torch.ao.quantization.quantize_fx.prepare_fx,torch.ao.quantization.quantize_fx.convert_fx, please migrate to use torchao pt2e quantization API instead (prepare_pt2e, convert_pt2e)
-    #   3. pt2e quantization has been migrated to torchao (https://github.com/pytorch/ao/tree/main/torchao/quantization/pt2e)
-    #   see https://github.com/pytorch/ao/issues/2259 for more details
-
-    quantized_model = torch.quantization.quantize_dynamic(
-        model=fp32_model,
-        qconfig_spec={nn.Linear, nn.Conv2d}, 
-        dtype=torch.qint8,
-    )
+    # 步驟 2: 定義量化配置 (與儲存時必須一致)
+    quant_config = Int8DynamicActivationInt8WeightConfig()
     
-    # 步驟 3: 載入 INT8 權重
+    # 步驟 3: 將結構轉換為量化模型
+    # 使用 quantize_ 進行 in-place 轉換
+    quantize_(fp32_model, quant_config)
+    quantized_model = fp32_model 
+    
+    # 步驟 4: 載入 INT8 權重
     int8_state_dict = torch.load(INT8_MODEL_PATH, map_location=DEVICE)
-    
+
     try:
         quantized_model.load_state_dict(int8_state_dict)
     except Exception as e:
