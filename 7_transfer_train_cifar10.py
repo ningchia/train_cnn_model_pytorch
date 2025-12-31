@@ -108,7 +108,20 @@ def get_loaders(data_dir: str, batch_size: int, want_reproducibility: bool, seed
     if want_reproducibility:
         worker_init_fn, generator = set_seed(seed)
     
+    # 在 PyTorch 中，所有的 torchvision.datasets 物件在實例化後，都會內建兩個非常重要的屬性：.classes (清單) 和 .class_to_idx (字典)。
+    # 若要知道 CIFAR-10 的類別名稱和索引對應關係，不需要去讀源碼，只需要在 Python 交互式環境（如 Jupyter 或 Python REPL）跑下面程式即可：
+    #   from torchvision import datasets
+    #   train_data = datasets.CIFAR10(root="data", train=True, download=True)
+    #   print(train_data.classes)       # 印出標籤字串清單
+    #   print(train_data.class_to_idx)  # 印出 {標籤: 索引} 的對照表
+    #
+    # 另外無論是torch, tensorflow/keras, 都可以使用python內建的 dir()函式來查看 dataset 物件的所有屬性和方法：
+    #   print(dir(train_data))
+
     # 載入訓練集
+    # 可以用下面方式看看一個sample有哪些欄位. 
+    #   img, label = dataset[0]
+    #   print(f"Image shape: {getattr(img, 'size', 'N/A')}, Label: {label}")    # getattr(object, name[, default])
     train_dataset = datasets.CIFAR10(root=data_dir, train=True, download=True, transform=train_transform)
     # 載入驗證集
     val_dataset = datasets.CIFAR10(root=data_dir, train=False, download=True, transform=val_transform)
