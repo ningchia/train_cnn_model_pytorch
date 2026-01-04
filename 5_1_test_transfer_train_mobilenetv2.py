@@ -9,6 +9,8 @@ import urllib.request
 from tqdm import tqdm
 from typing import List
 
+RUN_IN_WSL = False  # 如果在 WSL 環境下運行，請設置為 True
+
 # --- 1. 配置與設定 ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -74,6 +76,10 @@ def main():
         cap = cv2.VideoCapture(0)
         if not cap.isOpened():
             raise IOError("無法打開 WebCam。請檢查相機連接或驅動程式。")
+
+        # 關鍵設定 for WSL：將格式設為 MJPG (降低頻寬需求，增加相容性)
+        if RUN_IN_WSL:
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
 
         print("\n--- 即時 ImageNet 原始類別推論已啟動 ---")
         print("按下 'q' 鍵退出。")

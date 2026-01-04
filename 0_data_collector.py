@@ -3,6 +3,8 @@ import os
 import time
 import shutil # 引入 shutil 確保 os.makedirs 的父目錄創建
 
+RUN_IN_WSL = False  # 如果在 WSL 環境下運行，請設置為 True
+
 # --- 1. 定義類別名稱和儲存目錄 ---
 CLASS_NAMES = ["nothing", "hand", "cup"] 
 DATASET_DIR = "dataset" # 根資料集目錄
@@ -35,6 +37,11 @@ cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("錯誤: 無法開啟網路攝影機。請檢查裝置連接或索引號。")
     exit()
+
+# 關鍵設定 for WSL：將格式設為 MJPG (降低頻寬需求，增加相容性)
+if RUN_IN_WSL:
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+
 
 print("\n--- 資料收集程式啟動 ---")
 key_info = [f"[{i}] 儲存: {CLASS_NAMES[i]}" for i in range(len(CLASS_NAMES))]
